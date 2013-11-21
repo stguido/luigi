@@ -40,6 +40,9 @@ def _create_scheduler():
     if config.getboolean('scheduler', 'record_task_history', False):
         import db_task_history  # Needs sqlalchemy, thus imported here
         task_history_impl = db_task_history.DbTaskHistory()
+    elif config.getboolean('scheduler', 'log_task_history', False):
+        import log_task_history
+        task_history_impl = log_task_history.LogTaskHistory()
     else:
         task_history_impl = task_history.NopHistory()
     return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay, task_history_impl)
