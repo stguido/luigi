@@ -157,13 +157,16 @@ class CentralPlannerScheduler(Scheduler):
         """
         self.update(worker)
 
+        should_update_history = task_id not in self._tasks
         task = self._tasks.setdefault(task_id, Task(status=PENDING, deps=deps))
 
         if task.remove is not None:
             task.remove = None  # unmark task for removal so it isn't removed after being added
 
+        # don't allow re-scheduling of task while it is running, it must either fail or succeed first
         if not (task.status == RUNNING and status == PENDING):
-            # don't allow re-scheduling of task while it is running, it must either fail or succeed first
+            if task.status != status:
+                should_update_history = True
             task.status = status
             if status == FAILED:
                 task.retry = time.time() + self._retry_delay
@@ -178,7 +181,9 @@ class CentralPlannerScheduler(Scheduler):
 
         if expl is not None:
             task.expl = expl
-        self._update_task_history(task_id, status)
+
+        if should_update_history:
+            self._update_task_history(task_id, status, deps)
 
     def get_work(self, worker, host=None):
         # TODO: remove any expired nodes
@@ -336,13 +341,13 @@ class CentralPlannerScheduler(Scheduler):
         else:
             return {"taskId": task_id, "error": ""}
 
-    def _update_task_history(self, task_id, status, host=None):
+    def _update_task_history(self, task_id, status, deps=None, host=None):
         try:
             if status == DONE or status == FAILED:
                 successful = (status == DONE)
                 self._task_history.task_finished(task_id, successful)
             elif status == PENDING:
-                self._task_history.task_scheduled(task_id)
+                self._task_history.task_scheduled(task_id, deps)
             elif status == RUNNING:
                 self._task_history.task_started(task_id, host)
         except:

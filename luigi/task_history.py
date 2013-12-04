@@ -36,7 +36,7 @@ class TaskHistory(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def task_scheduled(self, task_id):
+    def task_scheduled(self, task_id, deps):
         pass
 
     @abc.abstractmethod
@@ -51,7 +51,7 @@ class TaskHistory(object):
 
 
 class NopHistory(TaskHistory):
-    def task_scheduled(self, task_id):
+    def task_scheduled(self, task_id, deps):
         pass
 
     def task_finished(self, task_id, successful):
