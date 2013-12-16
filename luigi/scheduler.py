@@ -17,6 +17,7 @@ import logging
 import time
 import cPickle as pickle
 import task_history as history
+from threading import Thread
 logger = logging.getLogger("luigi.server")
 
 from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
@@ -77,7 +78,7 @@ class CentralPlannerScheduler(Scheduler):
         self._remove_delay = remove_delay
         self._worker_disconnect_delay = worker_disconnect_delay
         self._active_workers = {}  # map from id to timestamp (last updated)
-        self._task_history = task_history or history.NopHistory()
+        self._task_history = task_history
         # TODO: have a Worker object instead, add more data to it
 
     def dump(self):
@@ -342,16 +343,21 @@ class CentralPlannerScheduler(Scheduler):
             return {"taskId": task_id, "error": ""}
 
     def _update_task_history(self, task_id, status, deps=None, host=None):
-        try:
-            if status == DONE or status == FAILED:
-                successful = (status == DONE)
-                self._task_history.task_finished(task_id, successful)
-            elif status == PENDING:
-                self._task_history.task_scheduled(task_id, deps)
-            elif status == RUNNING:
-                self._task_history.task_started(task_id, host)
-        except:
-            logger.warning("Error saving Task history", exc_info=1)
+        def update_history_in_background():
+            try:
+                if status == DONE or status == FAILED:
+                    successful = (status == DONE)
+                    self._task_history.task_finished(task_id, successful)
+                elif status == PENDING:
+                    self._task_history.task_scheduled(task_id, deps)
+                elif status == RUNNING:
+                    self._task_history.task_started(task_id, host)
+                logger.info("Task history updated for %s", task_id)
+            except:
+                logger.warning("Error saving Task history", exc_info=1)
+        if self._task_history:
+            # a separate thread will avoid getting stuck in blocking operations
+            Thread(target=update_history_in_background).start()
 
     @property
     def task_history(self):

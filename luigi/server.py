@@ -27,7 +27,7 @@ import scheduler
 import pkg_resources
 import signal
 from rpc import RemoteSchedulerResponder
-import task_history
+import task_history_web
 import logging
 logger = logging.getLogger("luigi.server")
 
@@ -41,7 +41,7 @@ def _create_scheduler():
         import db_task_history  # Needs sqlalchemy, thus imported here
         task_history_impl = db_task_history.DbTaskHistory()
     else:
-        task_history_impl = task_history.NopHistory()
+        task_history_impl = None
     return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay, task_history_impl)
 
 
@@ -60,41 +60,6 @@ class RPCHandler(tornado.web.RequestHandler):
             self.write({"response": result})  # wrap all json response in a dictionary
         else:
             self.send_error(404)
-
-
-class BaseTaskHistoryHandler(tornado.web.RequestHandler):
-    def initialize(self, api):
-        self._api = api
-
-    def get_template_path(self):
-        return 'luigi/templates'
-
-
-class RecentRunHandler(BaseTaskHistoryHandler):
-    def get(self):
-        tasks = self._api.task_history.find_latest_runs()
-        self.render("recent.html", tasks=tasks)
-
-
-class ByNameHandler(BaseTaskHistoryHandler):
-    def get(self, name):
-        tasks = self._api.task_history.find_all_by_name(name)
-        self.render("recent.html", tasks=tasks)
-
-
-class ByIdHandler(BaseTaskHistoryHandler):
-    def get(self, id):
-        task = self._api.task_history.find_task_by_id(id)
-        self.render("show.html", task=task)
-
-
-class ByParamsHandler(BaseTaskHistoryHandler):
-    def get(self, name):
-        payload = self.get_argument('data', default="{}")
-        arguments = json.loads(payload)
-        tasks = self._api.task_history.find_all_by_parameters(name, session=None, **arguments)
-        self.render("recent.html", tasks=tasks)
-
 
 class StaticFileHandler(tornado.web.RequestHandler):
     def get(self, path):
@@ -116,12 +81,10 @@ def app(api):
     handlers = [
         (r'/api/(.*)', RPCHandler, {"api": api}),
         (r'/static/(.*)', StaticFileHandler),
-        (r'/', RootPathHandler),
-        (r'/history', RecentRunHandler, {'api': api}),
-        (r'/history/by_name/(.*?)', ByNameHandler, {'api': api}),
-        (r'/history/by_id/(.*?)', ByIdHandler, {'api': api}),
-        (r'/history/by_params/(.*?)', ByParamsHandler, {'api': api})
+        (r'/', RootPathHandler)
     ]
+    if api.task_history:
+        handlers.extend(task_history_web.get_handlers(api))
     api_app = tornado.web.Application(handlers)
     return api_app
 
