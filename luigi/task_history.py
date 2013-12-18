@@ -17,7 +17,7 @@ import traceback
 import logging
 import task
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger('luigi.server')
 
 
 class Task(object):

@@ -352,9 +352,9 @@ class CentralPlannerScheduler(Scheduler):
                     self._task_history.task_scheduled(task_id, deps)
                 elif status == RUNNING:
                     self._task_history.task_started(task_id, host)
-                logger.info("Task history updated for %s", task_id)
+                logger.info("Task history updated for %s with %s" % (task_id, status))
             except:
-                logger.warning("Error saving Task history", exc_info=1)
+                logger.warning("Error saving Task history for %s with %s" % (task_id, status), exc_info=1)
         if self._task_history:
             # a separate thread will avoid getting stuck in blocking operations
             Thread(target=update_history_in_background).start()

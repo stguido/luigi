@@ -28,7 +28,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 
 Base = declarative_base()
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger('luigi.server')
 
 
 class DbTaskHistory(task_history.TaskHistory):
@@ -51,7 +51,13 @@ class DbTaskHistory(task_history.TaskHistory):
     def __init__(self):
         config = configuration.get_config()
         connection_string = config.get('task_history', 'db_connection')
-        self.engine = create_engine(connection_string)
+        self.engine = create_engine(
+            connection_string,
+            pool_size=config.getint('task_history', 'db_pool_size', 20),
+            max_overflow=config.getint('task_history', 'db_pool_max_overflow', 30),
+            pool_timeout=config.getint('task_history', 'db_pool_timeout', 60),
+            pool_recycle=config.getint('task_history', 'db_pool_recycle', 3600)
+        )
         self.session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
 
