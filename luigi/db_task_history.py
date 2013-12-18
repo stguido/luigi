@@ -196,7 +196,7 @@ class TaskRecord(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(60), index=True)
     host = Column(String(60))
-    luigi_id = Column(String(400), index=True, unique=True)
+    luigi_id = Column(String(600), index=True, unique=True)
     status = Column(String(10))
     parameters = relationship('TaskParameter', collection_class=attribute_mapped_collection('name'),
                               cascade="all, delete-orphan")
