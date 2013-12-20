@@ -79,10 +79,10 @@ class CentralPlannerScheduler(Scheduler):
         self._worker_disconnect_delay = worker_disconnect_delay
         self._active_workers = {}  # map from id to timestamp (last updated)
         self._task_history = task_history
-        self._hitory_queue = Queue.Queue()
+        self._history_queue = Queue.Queue()
         if self._task_history:
             for i in range(10):
-                w = history.HistoryWorker(self._hitory_queue, self._task_history)
+                w = history.HistoryWorker(self._history_queue, self._task_history)
                 w.setDaemon(True)
                 w.start()
 
@@ -349,7 +349,7 @@ class CentralPlannerScheduler(Scheduler):
 
     def _update_task_history(self, task_id, status, deps=None, host=None):
         if self._task_history:
-            self._hitory_queue.put(history.StatusUpdate(task_id, status, deps=None, host=None))
+            self._history_queue.put(history.StatusUpdate(task_id, status, deps=None, host=None))
 
     @property
     def task_history(self):
