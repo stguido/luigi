@@ -16,6 +16,9 @@ import abc
 import traceback
 import logging
 import task
+import threading
+
+from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
 
 logger = logging.getLogger('luigi.server')
 
@@ -48,3 +51,36 @@ class TaskHistory(object):
         pass
 
     # TODO(erikbern): should web method (find_latest_runs etc) be abstract?
+
+
+class StatusUpdate(object):
+    ''' Interface Status updates used by background workers
+    '''
+    def __init__(self, task_id, status, deps=None, host=None):
+        self.task_id = task_id
+        self.status = status
+        self.deps = deps
+        self.host = host
+
+
+class HistoryWorker(threading.Thread):
+    def __init__(self, queue, task_history):
+        threading.Thread.__init__(self)
+        self._queue = queue
+        self._task_history = task_history
+
+    def run(self):
+        while True:
+            update = self._queue.get()
+            try:
+                if update.status == DONE or update.status == FAILED:
+                    successful = (status == DONE)
+                    self._task_history.task_finished(update.task_id, successful)
+                elif update.status == PENDING:
+                    self._task_history.task_scheduled(update.task_id, update.deps)
+                elif update.status == RUNNING:
+                    self._task_history.task_started(update.task_id, update.host)
+                logger.info("Task history updated for %s with %s" % (update.task_id, update.status))
+            except:
+                logger.warning("Error saving Task history for %s with %s" % (update.task_id, update.status), exc_info=1)
+            self._queue.task_done()
