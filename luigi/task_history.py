@@ -74,7 +74,7 @@ class HistoryWorker(threading.Thread):
             update = self._queue.get()
             try:
                 if update.status == DONE or update.status == FAILED:
-                    successful = (status == DONE)
+                    successful = (update.status == DONE)
                     self._task_history.task_finished(update.task_id, successful)
                 elif update.status == PENDING:
                     self._task_history.task_scheduled(update.task_id, update.deps)
