@@ -205,7 +205,7 @@ class TaskRecord(Base):
                         primaryjoin=id==deps_table.c.task_id,
                         secondaryjoin=id==deps_table.c.dep_id,
                         passive_deletes=True)
-    events = relationship("TaskEvent", order_by=lambda: TaskEvent.ts.desc(), backref="task")
+    events = relationship("TaskEvent", order_by=lambda: TaskEvent.ts.desc(), backref="task", lazy="dynamic")
     scheduling_ts = Column(TIMESTAMP)
     execution_ts = Column(TIMESTAMP)
     completion_ts = Column(TIMESTAMP)
