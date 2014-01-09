@@ -349,7 +349,7 @@ class CentralPlannerScheduler(Scheduler):
 
     def _update_task_history(self, task_id, status, deps=None, host=None):
         if self._task_history:
-            self._history_queue.put(history.StatusUpdate(task_id, status, deps=None, host=None))
+            self._history_queue.put(history.StatusUpdate(task_id, status, deps, host))
 
     @property
     def task_history(self):
